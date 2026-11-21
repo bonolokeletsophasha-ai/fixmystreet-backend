@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import supabase from './config/supabase.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.get('/api/health', (req, res) => {
         supabaseConfigured: Boolean(supabase)
     });
 });
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
 
 // Start server
 app.listen(PORT, () => {
