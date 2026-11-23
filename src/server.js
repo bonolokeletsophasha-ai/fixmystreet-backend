@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -6,13 +5,9 @@ import cors from 'cors';
 import areaRoutes from './routes/areaRoutes.js';
 import supabase from './config/supabase.js';
 import authRoutes from './routes/authRoutes.js';
-<<<<<<< HEAD
 import reportRoutes from './routes/reportsRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
-=======
-import reportRoutes from './routes/reportRoutes.js';
 import referenceRoutes from './routes/referenceRoutes.js';
->>>>>>> main
 
 const app = express();
 
@@ -21,7 +16,6 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -41,6 +35,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Area routes
 app.use('/api/areas', areaRoutes);
 
 // Authentication routes
@@ -49,12 +44,11 @@ app.use('/api/auth', authRoutes);
 // Infrastructure report routes
 app.use('/api/reports', reportRoutes);
 
-<<<<<<< HEAD
 // Category routes
 app.use('/api/categories', categoryRoutes);
-=======
+
+// Province and municipality reference routes
 app.use('/api', referenceRoutes);
->>>>>>> main
 
 // Start server
 app.listen(PORT, () => {
