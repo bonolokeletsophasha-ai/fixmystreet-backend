@@ -1,5 +1,4 @@
-
- // CREATE A NEW REPORT
+// CREATE A NEW REPORT
 export const createReport = async (req, res) => {
     try {
         const {
@@ -25,6 +24,15 @@ export const createReport = async (req, res) => {
             });
         }
 
+        const allowedPriorities = ['Low', 'Medium', 'High'];
+
+        if (priority && !allowedPriorities.includes(priority)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid priority. Use Low, Medium or High.'
+            });
+        }
+
         const { data: category, error: categoryError } =
             await req.supabase
                 .from('categories')
@@ -42,8 +50,8 @@ export const createReport = async (req, res) => {
         const { data: report, error } = await req.supabase
             .from('reports')
             .insert({
-                title,
-                description,
+                title: title.trim(),
+                description: description.trim(),
                 category_id: category.id,
                 area_id: req.profile.area_id,
                 suburb: suburb || req.profile.suburb || null,
@@ -84,6 +92,13 @@ export const createReport = async (req, res) => {
 // GET ALL REPORTS IN THE USER'S MUNICIPALITY
 export const getReports = async (req, res) => {
     try {
+        if (!req.profile.area_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Your account does not have an assigned municipality.'
+            });
+        }
+
         const { category_id, suburb, status } = req.query;
 
         let query = req.supabase
@@ -193,8 +208,6 @@ export const getReportById = async (req, res) => {
 // EDIT REPORT DETAILS (ADMIN ONLY)
 export const updateReport = async (req, res) => {
     try {
-<<<<<<< HEAD
-=======
         if (req.profile.role !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -204,7 +217,6 @@ export const updateReport = async (req, res) => {
 
         const { id } = req.params;
 
->>>>>>> main
         const {
             title,
             description,
@@ -214,28 +226,6 @@ export const updateReport = async (req, res) => {
             priority
         } = req.body;
 
-<<<<<<< HEAD
-        const { id } = req.params;
-
-        if (!title || !description || !category_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'Title, description and category are required.'
-            });
-        }
-
-        const { data: category, error: categoryError } =
-            await req.supabase
-                .from('categories')
-                .select('id')
-                .eq('id', category_id)
-                .single();
-
-        if (categoryError || !category) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please select a valid category.'
-=======
         const updates = {};
 
         if (title !== undefined) {
@@ -271,7 +261,7 @@ export const updateReport = async (req, res) => {
             if (categoryError || !category) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Please select a valid category.'
+                    message: 'Please select a valid report category.'
                 });
             }
 
@@ -303,24 +293,12 @@ export const updateReport = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide at least one field to update.'
->>>>>>> main
             });
         }
 
         const { data: report, error } = await req.supabase
             .from('reports')
-<<<<<<< HEAD
-            .update({
-                title,
-                description,
-                category_id,
-                suburb: suburb || null,
-                location: location || null,
-                priority: priority || 'Medium'
-            })
-=======
             .update(updates)
->>>>>>> main
             .eq('id', id)
             .eq('area_id', req.profile.area_id)
             .select()
@@ -344,11 +322,7 @@ export const updateReport = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-<<<<<<< HEAD
-            message: 'An unexpected error occurred while updating the report.'
-=======
             message: 'Unable to update report.'
->>>>>>> main
         });
     }
 };
