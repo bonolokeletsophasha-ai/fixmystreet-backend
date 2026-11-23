@@ -193,6 +193,18 @@ export const getReportById = async (req, res) => {
 // EDIT REPORT DETAILS (ADMIN ONLY)
 export const updateReport = async (req, res) => {
     try {
+<<<<<<< HEAD
+=======
+        if (req.profile.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can edit reports.'
+            });
+        }
+
+        const { id } = req.params;
+
+>>>>>>> main
         const {
             title,
             description,
@@ -202,6 +214,7 @@ export const updateReport = async (req, res) => {
             priority
         } = req.body;
 
+<<<<<<< HEAD
         const { id } = req.params;
 
         if (!title || !description || !category_id) {
@@ -222,11 +235,81 @@ export const updateReport = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Please select a valid category.'
+=======
+        const updates = {};
+
+        if (title !== undefined) {
+            if (typeof title !== 'string' || !title.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Report title cannot be empty.'
+                });
+            }
+
+            updates.title = title.trim();
+        }
+
+        if (description !== undefined) {
+            if (typeof description !== 'string' || !description.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Report description cannot be empty.'
+                });
+            }
+
+            updates.description = description.trim();
+        }
+
+        if (category_id !== undefined) {
+            const { data: category, error: categoryError } =
+                await req.supabase
+                    .from('categories')
+                    .select('id')
+                    .eq('id', category_id)
+                    .single();
+
+            if (categoryError || !category) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Please select a valid category.'
+                });
+            }
+
+            updates.category_id = category.id;
+        }
+
+        if (suburb !== undefined) {
+            updates.suburb = suburb;
+        }
+
+        if (location !== undefined) {
+            updates.location = location;
+        }
+
+        if (priority !== undefined) {
+            const allowedPriorities = ['Low', 'Medium', 'High'];
+
+            if (!allowedPriorities.includes(priority)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid priority. Use Low, Medium or High.'
+                });
+            }
+
+            updates.priority = priority;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide at least one field to update.'
+>>>>>>> main
             });
         }
 
         const { data: report, error } = await req.supabase
             .from('reports')
+<<<<<<< HEAD
             .update({
                 title,
                 description,
@@ -235,6 +318,9 @@ export const updateReport = async (req, res) => {
                 location: location || null,
                 priority: priority || 'Medium'
             })
+=======
+            .update(updates)
+>>>>>>> main
             .eq('id', id)
             .eq('area_id', req.profile.area_id)
             .select()
@@ -258,7 +344,11 @@ export const updateReport = async (req, res) => {
 
         return res.status(500).json({
             success: false,
+<<<<<<< HEAD
             message: 'An unexpected error occurred while updating the report.'
+=======
+            message: 'Unable to update report.'
+>>>>>>> main
         });
     }
 };
