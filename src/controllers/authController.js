@@ -19,7 +19,6 @@ export const registerUser = async (req, res) => {
             });
         }
 
-        // Confirm that the selected municipality exists
         const { data: area, error: areaError } = await supabase
             .from('areas')
             .select('id, province, municipality')
@@ -33,7 +32,6 @@ export const registerUser = async (req, res) => {
             });
         }
 
-        // Register through Supabase Auth
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -97,7 +95,6 @@ export const loginUser = async (req, res) => {
             });
         }
 
-        // Create a Supabase client scoped to this user's access token
         const { createClient } = await import('@supabase/supabase-js');
 
         const userSupabase = createClient(
@@ -116,7 +113,6 @@ export const loginUser = async (req, res) => {
             }
         );
 
-        // Retrieve the user's database profile
         const { data: profile, error: profileError } = await userSupabase
             .from('users')
             .select('id, full_name, email, role, area_id, suburb')
@@ -145,4 +141,14 @@ export const loginUser = async (req, res) => {
             message: 'An unexpected error occurred during login.'
         });
     }
+};
+
+
+// GET CURRENT LOGGED-IN USER
+export const getCurrentUser = async (req, res) => {
+    return res.status(200).json({
+        success: true,
+        message: 'User profile retrieved successfully.',
+        user: req.profile
+    });
 };

@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+
 import supabase from './config/supabase.js';
 import authRoutes from './routes/authRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
 const app = express();
 
@@ -32,6 +34,9 @@ app.get('/api/health', (req, res) => {
 
 // Authentication routes
 app.use('/api/auth', authRoutes);
+
+// Infrastructure report routes
+app.use('/api/reports', reportRoutes);
 
 // Start server
 app.listen(PORT, () => {
