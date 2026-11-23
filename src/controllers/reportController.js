@@ -10,7 +10,6 @@ export const createReport = async (req, res) => {
             priority
         } = req.body;
 
-        // Validate required fields
         if (!title || !description || !category_id) {
             return res.status(400).json({
                 success: false,
@@ -18,7 +17,6 @@ export const createReport = async (req, res) => {
             });
         }
 
-        // Ensure the user has an assigned municipality
         if (!req.profile.area_id) {
             return res.status(400).json({
                 success: false,
@@ -26,7 +24,6 @@ export const createReport = async (req, res) => {
             });
         }
 
-        // Verify that the selected category exists
         const { data: category, error: categoryError } =
             await req.supabase
                 .from('categories')
@@ -41,7 +38,6 @@ export const createReport = async (req, res) => {
             });
         }
 
-        // Create report using the authenticated user's details
         const { data: report, error } = await req.supabase
             .from('reports')
             .insert({
@@ -101,17 +97,14 @@ export const getReports = async (req, res) => {
             .eq('area_id', req.profile.area_id)
             .order('created_at', { ascending: false });
 
-        // Filter by category
         if (category_id) {
             query = query.eq('category_id', category_id);
         }
 
-        // Filter by suburb
         if (suburb) {
             query = query.ilike('suburb', `%${suburb}%`);
         }
 
-        // Filter by status
         if (status) {
             const allowedStatuses = [
                 'Pending',
@@ -191,6 +184,129 @@ export const getReportById = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Unable to retrieve the report.'
+        });
+    }
+};
+
+
+// EDIT REPORT DETAILS (ADMIN ONLY)
+export const updateReport = async (req, res) => {
+    try {
+        if (req.profile.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can edit reports.'
+            });
+        }
+
+        const { id } = req.params;
+
+        const {
+            title,
+            description,
+            category_id,
+            suburb,
+            location,
+            priority
+        } = req.body;
+
+        const updates = {};
+
+        if (title !== undefined) {
+            if (typeof title !== 'string' || !title.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Report title cannot be empty.'
+                });
+            }
+
+            updates.title = title.trim();
+        }
+
+        if (description !== undefined) {
+            if (typeof description !== 'string' || !description.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Report description cannot be empty.'
+                });
+            }
+
+            updates.description = description.trim();
+        }
+
+        if (category_id !== undefined) {
+            const { data: category, error: categoryError } =
+                await req.supabase
+                    .from('categories')
+                    .select('id')
+                    .eq('id', category_id)
+                    .single();
+
+            if (categoryError || !category) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Please select a valid category.'
+                });
+            }
+
+            updates.category_id = category.id;
+        }
+
+        if (suburb !== undefined) {
+            updates.suburb = suburb;
+        }
+
+        if (location !== undefined) {
+            updates.location = location;
+        }
+
+        if (priority !== undefined) {
+            const allowedPriorities = ['Low', 'Medium', 'High'];
+
+            if (!allowedPriorities.includes(priority)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid priority. Use Low, Medium or High.'
+                });
+            }
+
+            updates.priority = priority;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide at least one field to update.'
+            });
+        }
+
+        const { data: report, error } = await req.supabase
+            .from('reports')
+            .update(updates)
+            .eq('id', id)
+            .eq('area_id', req.profile.area_id)
+            .select()
+            .single();
+
+        if (error || !report) {
+            return res.status(404).json({
+                success: false,
+                message: 'Report not found or could not be updated.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Report updated successfully.',
+            report
+        });
+
+    } catch (error) {
+        console.error('Update report error:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Unable to update report.'
         });
     }
 };

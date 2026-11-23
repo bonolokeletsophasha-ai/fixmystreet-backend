@@ -4,6 +4,7 @@ import {
     createReport,
     getReports,
     getReportById,
+    updateReport,
     updateReportStatus,
     deleteReport
 } from '../controllers/reportController.js';
@@ -18,11 +19,14 @@ router.use(authMiddleware);
 // Create a report
 router.post('/', createReport);
 
-// Retrieve all reports in the user's municipality
+// Retrieve all reports
 router.get('/', getReports);
 
 // Retrieve one report
 router.get('/:id', getReportById);
+
+// Edit report details (admin only)
+router.patch('/:id', updateReport);
 
 // Update report status (admin only)
 router.patch('/:id/status', updateReportStatus);
