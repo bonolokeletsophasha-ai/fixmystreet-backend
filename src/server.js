@@ -1,11 +1,18 @@
+
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 
+import areaRoutes from './routes/areaRoutes.js';
 import supabase from './config/supabase.js';
 import authRoutes from './routes/authRoutes.js';
+<<<<<<< HEAD
+import reportRoutes from './routes/reportsRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
+=======
 import reportRoutes from './routes/reportRoutes.js';
 import referenceRoutes from './routes/referenceRoutes.js';
+>>>>>>> main
 
 const app = express();
 
@@ -34,13 +41,20 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+app.use('/api/areas', areaRoutes);
+
 // Authentication routes
 app.use('/api/auth', authRoutes);
 
 // Infrastructure report routes
 app.use('/api/reports', reportRoutes);
 
+<<<<<<< HEAD
+// Category routes
+app.use('/api/categories', categoryRoutes);
+=======
 app.use('/api', referenceRoutes);
+>>>>>>> main
 
 // Start server
 app.listen(PORT, () => {
