@@ -3,6 +3,7 @@ import express from 'express';
 import {
     createReport,
     getReports,
+    getPublicReports,
     getReportById,
     updateReport,
     updateReportStatus,
@@ -11,16 +12,20 @@ import {
 
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-// All report routes require authentication
+// Public route: visitors can explore reports without logging in
+router.get('/public', getPublicReports);
+
+// All remaining report routes require authentication
 router.use(authMiddleware);
 
 // Residents and admins can submit reports
-router.post('/', createReport);
+router.post('/', upload.single('image'), createReport);
 
-// Retrieve reports
+// Authenticated users can retrieve reports in their municipality
 router.get('/', getReports);
 router.get('/:id', getReportById);
 

@@ -1,5 +1,72 @@
+import { randomUUID } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
+
+// GET PUBLIC REPORTS
+export const getPublicReports = async (req, res) => {
+    try {
+        const publicSupabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+        );
+
+        const { suburb } = req.query;
+
+        let query = publicSupabase
+            .from('reports')
+            .select(`
+                id,
+                title,
+                description,
+                category_id,
+                suburb,
+                location,
+                priority,
+                status,
+                image_url,
+                created_at,
+                categories (
+                    id,
+                    name
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (suburb) {
+            query = query.ilike('suburb', `%${suburb}%`);
+        }
+
+        const { data: reports, error } = await query;
+
+        if (error) {
+            console.error('Public reports error:', error);
+
+            return res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            count: reports.length,
+            reports
+        });
+
+    } catch (error) {
+        console.error('Public reports error:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Unable to retrieve public reports.'
+        });
+    }
+};
+
+
 // CREATE A NEW REPORT
 export const createReport = async (req, res) => {
+    let uploadedImagePath = null;
+
     try {
         const {
             title,
@@ -33,6 +100,7 @@ export const createReport = async (req, res) => {
             });
         }
 
+        // Validate category
         const { data: category, error: categoryError } =
             await req.supabase
                 .from('categories')
@@ -47,6 +115,56 @@ export const createReport = async (req, res) => {
             });
         }
 
+        // Upload image if one was provided
+        let imageUrl = null;
+
+        if (req.file) {
+            const allowedMimeTypes = {
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/webp': 'webp'
+            };
+
+            const extension = allowedMimeTypes[req.file.mimetype];
+
+            if (!extension) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only JPEG, PNG and WebP images are allowed.'
+                });
+            }
+
+            const fileName = `${randomUUID()}.${extension}`;
+
+            uploadedImagePath = `${req.authUser.id}/${fileName}`;
+
+            const { error: uploadError } = await req.supabase
+                .storage
+                .from('report-images')
+                .upload(uploadedImagePath, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) {
+                console.error('Image upload error:', uploadError);
+
+                return res.status(400).json({
+                    success: false,
+                    message: `Image upload failed: ${uploadError.message}`
+                });
+            }
+
+            const { data: publicUrlData } = req.supabase
+                .storage
+                .from('report-images')
+                .getPublicUrl(uploadedImagePath);
+
+            imageUrl = publicUrlData.publicUrl;
+        }
+
+        // Save report details and image URL
         const { data: report, error } = await req.supabase
             .from('reports')
             .insert({
@@ -58,13 +176,22 @@ export const createReport = async (req, res) => {
                 location: location || null,
                 priority: priority || 'Medium',
                 status: 'Pending',
-                created_by: req.authUser.id
+                created_by: req.authUser.id,
+                image_url: imageUrl
             })
             .select()
             .single();
 
         if (error) {
             console.error('Create report error:', error);
+
+            // Remove uploaded image if report creation fails
+            if (uploadedImagePath) {
+                await req.supabase
+                    .storage
+                    .from('report-images')
+                    .remove([uploadedImagePath]);
+            }
 
             return res.status(400).json({
                 success: false,
@@ -80,6 +207,14 @@ export const createReport = async (req, res) => {
 
     } catch (error) {
         console.error('Create report error:', error);
+
+        // Clean up uploaded image if something goes wrong
+        if (uploadedImagePath) {
+            await req.supabase
+                .storage
+                .from('report-images')
+                .remove([uploadedImagePath]);
+        }
 
         return res.status(500).json({
             success: false,

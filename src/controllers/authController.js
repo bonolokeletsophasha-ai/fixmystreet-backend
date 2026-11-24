@@ -1,10 +1,33 @@
+import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabase.js';
+
+// Supabase admin client
+const adminSupabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false
+        }
+    }
+);
+
 
 // REGISTER USER
 export const registerUser = async (req, res) => {
     try {
-        const { full_name, email, password, area_id, suburb } = req.body;
+        const {
+            full_name,
+            email,
+            password,
+            area_id,
+            suburb,
+            role,
+            admin_invitation_code
+        } = req.body;
 
+        // Validate required fields
         if (!full_name || !email || !password || !area_id) {
             return res.status(400).json({
                 success: false,
@@ -19,6 +42,28 @@ export const registerUser = async (req, res) => {
             });
         }
 
+        // Validate account type
+        if (!['resident', 'admin'].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please select a valid account type.'
+            });
+        }
+
+        // Verify administrator invitation code
+        if (role === 'admin') {
+            if (
+                !process.env.ADMIN_INVITATION_CODE ||
+                admin_invitation_code !== process.env.ADMIN_INVITATION_CODE
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Invalid administrator invitation code.'
+                });
+            }
+        }
+
+        // Check municipality
         const { data: area, error: areaError } = await supabase
             .from('areas')
             .select('id, province, municipality')
@@ -32,6 +77,7 @@ export const registerUser = async (req, res) => {
             });
         }
 
+        // Register with Supabase Authentication
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -51,13 +97,39 @@ export const registerUser = async (req, res) => {
             });
         }
 
+        if (!data.user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Unable to create your account.'
+            });
+        }
+
+        // Assign the verified account role in the users table
+        const { error: roleError } = await adminSupabase
+            .from('users')
+            .update({ role })
+            .eq('id', data.user.id);
+
+        if (roleError) {
+            console.error('Role assignment error:', roleError);
+
+            // Remove the newly created account if role assignment fails
+            await adminSupabase.auth.admin.deleteUser(data.user.id);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Unable to complete account registration. Please try again.'
+            });
+        }
+
         return res.status(201).json({
             success: true,
             message: data.session
                 ? 'Registration successful.'
                 : 'Registration successful. Please verify your email.',
             user: data.user,
-            session: data.session
+            session: data.session,
+            role
         });
 
     } catch (error) {
